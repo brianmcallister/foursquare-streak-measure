@@ -1,5 +1,12 @@
 require 'sinatra'
 
+id = 'RNUOV5S2LW13D22K4WBXXVNXDF3TQ4NQZA5IOODCFI4XWYYZ'
+secret = 'SJTC0H15ZYCSDZU2HSWB1F3PBTEGC0YTGSK5ABBKITYXRY1B'
+
 get '/' do
   'hellloo'
+end
+
+get '/auth' do
+  'auth'
 end
