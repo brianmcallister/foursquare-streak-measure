@@ -49,7 +49,10 @@ get '/checkins' do
     "?oauth_token=#{session['token']}&limit=250"
   resp = JSON.parse resp.body
   
-  analyze_checkins resp['response']['checkins']['items']
+  checkins = group_checkins_by_week resp['response']['checkins']['items']
+  streak = get_streak_for checkins, 'coffee shop'
+  
+  pp '-------- streak for bar: ' + streak.inspect
   
   content_type :json
   resp.to_json
@@ -74,7 +77,7 @@ def get_access_token(code)
   return resp['access_token']
 end
 
-def analyze_checkins(checkins)
+def group_checkins_by_week(checkins)
   pp "Got #{checkins.length} checkins."
   
   list_by_week = {}
@@ -97,12 +100,42 @@ def analyze_checkins(checkins)
       list_by_week[week_number] = []
     end
     
-    list_by_week[week_number] << checkin['venue']['name']
+    list_by_week[week_number].push(venue_categories).flatten!
   end
   
   list_by_week.sort_by { |week| week }
   
-  list_by_week.each_pair do |week, venues|
-    puts "week #{week}: #{venues.inspect}"
+  return list_by_week
+end
+
+def get_streak_for(list, category)
+  streak = 0
+  streak_ended = false
+    
+  list.each_pair do |week, categories|
+    result = false
+    
+    categories.each do |cat|
+      if cat.downcase.include? category.downcase
+        result = true
+      end
+    end
+
+    if streak_ended and streak > 0
+      puts '----- broke'
+      break
+    end
+    
+    if not result
+      puts "----- no result for week #{week}"
+      streak_ended = true
+      next
+    end
+    
+    puts '----- add to streak'
+    streak_ended = false
+    streak = streak + 1
   end
+  
+  return streak
 end
