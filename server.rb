@@ -98,11 +98,11 @@ def analyze_checkins(checkins)
     end
     
     list_by_week[week_number] << checkin['venue']['name']
-    
-    list_by_week.each_pair do |week, venues|
-      puts "week #{week}: #{venues.inspect}"
-    end
-    
-    # pp "#{checkin['venue']['name']} - week: #{week_number} - cats: #{venue_categories.join ', '}"
+  end
+  
+  list_by_week.sort_by { |week| week }
+  
+  list_by_week.each_pair do |week, venues|
+    puts "week #{week}: #{venues.inspect}"
   end
 end
