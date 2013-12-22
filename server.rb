@@ -3,7 +3,11 @@ require 'json'
 require 'patron'
 require 'pp'
 
+enable :sessions
+
 configure do
+  set :session_secret, 'asdf'
+  
   set :port, '3000'
   set :domain, "http://localhost:#{settings.port}"
   
@@ -20,26 +24,31 @@ http = Patron::Session.new
 http.base_url = "http://api.foursquare.com/v2"
 http.enable_debug 'patron.debug'
 
-code = ''
 token = ''
 
 get '/' do
-  if params.has_key? 'code'
-    code = params['code']
-    token = get_access_token code
-  end
+  token ||= session['token']
   
   if not token.empty?
-    return 'token: ' + token
+    return 'authed'
   end
+  
+  if params.has_key? 'code'
+    session['token'] = get_access_token params['code']
+  end
+  
+  return 'session: ' + session.inspect
   
   erb :index
 end
 
 get '/checkins' do
-  return 'not authenticated' if token.empty?
-  resp = http.get "/#{settings.fsq_endpoint_checkins}?oauth_token=#{token}"
+  return 'not authenticated' unless session['token']
+  resp = http.get "/#{settings.fsq_endpoint_checkins}" +
+    "?oauth_token=#{session['token']}&limit=250"
   resp = JSON.parse resp.body
+  
+  analyze_checkins resp['response']['checkins']['items']
   
   content_type :json
   resp.to_json
@@ -60,6 +69,15 @@ def get_access_token(code)
     "&code=#{code}"
     
   resp = session.get "?#{query_params}"
-  json = JSON.parse resp.body
-  json['access_token']
+  resp = JSON.parse resp.body
+  return resp['access_token']
+end
+
+def analyze_checkins(checkins)
+  pp "Got #{checkins.length} checkins."
+  
+  checkins.each do |checkin|
+    pp '------ venue' + checkin['venue']['name']
+  end
+  
 end
