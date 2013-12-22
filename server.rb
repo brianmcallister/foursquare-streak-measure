@@ -21,6 +21,7 @@ configure do
 end
 
 http = Patron::Session.new
+http.timeout = 20
 http.base_url = "http://api.foursquare.com/v2"
 http.enable_debug 'patron.debug'
 
@@ -76,8 +77,32 @@ end
 def analyze_checkins(checkins)
   pp "Got #{checkins.length} checkins."
   
-  checkins.each do |checkin|
-    pp '------ venue' + checkin['venue']['name']
-  end
+  list_by_week = {}
+  previous = nil
   
+  checkins.each do |checkin|
+    week_number = Time.at(checkin['createdAt']).strftime '%U'
+    categories = checkin['venue']['categories']
+    previous = checkin
+    
+    next if not categories.length
+    
+    venue_categories = []
+    
+    categories.each do |cat|
+      venue_categories << cat['shortName']
+    end
+    
+    if not list_by_week.has_key? week_number
+      list_by_week[week_number] = []
+    end
+    
+    list_by_week[week_number] << checkin['venue']['name']
+    
+    list_by_week.each_pair do |week, venues|
+      puts "week #{week}: #{venues.inspect}"
+    end
+    
+    # pp "#{checkin['venue']['name']} - week: #{week_number} - cats: #{venue_categories.join ', '}"
+  end
 end
