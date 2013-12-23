@@ -2,6 +2,7 @@ require 'sinatra'
 require 'json'
 require 'patron'
 require 'pp'
+require_relative 'streak'
 
 enable :sessions
 
@@ -49,14 +50,13 @@ get '/checkins' do
     "?oauth_token=#{session['token']}&limit=250"
   resp = JSON.parse resp.body
   
-  checkins = group_checkins_by_week resp['response']['checkins']['items']
+  checkins = resp['response']['checkins']['items']
   category = params['category']
-    
-  resp = {}
-  resp[category] = get_streak_for checkins, category
   
+  streak = Streak.new checkins, category
+
   content_type :json
-  resp.to_json
+  streak.results.to_json
 end
 
 get '/auth' do
@@ -76,69 +76,4 @@ def get_access_token(code)
   resp = session.get "?#{query_params}"
   resp = JSON.parse resp.body
   return resp['access_token']
-end
-
-def group_checkins_by_week(checkins)
-  pp "Got #{checkins.length} checkins."
-  
-  list_by_week = {}
-  previous = nil
-  
-  checkins.each do |checkin|
-    week_number = Time.at(checkin['createdAt']).strftime '%U'
-    categories = checkin['venue']['categories']
-    previous = checkin
-    
-    next if not categories.length
-    
-    venue_categories = []
-    
-    categories.each do |cat|
-      venue_categories << cat['shortName']
-    end
-    
-    if not list_by_week.has_key? week_number
-      list_by_week[week_number] = []
-    end
-    
-    list_by_week[week_number].push(venue_categories).flatten!
-  end
-  
-  list_by_week.sort_by { |week| week }
-  
-  return list_by_week
-end
-
-def get_streak_for(list, category)
-  streak = 0
-  streak_ended = false
-    
-  list.each_pair do |week, categories|
-    result = false
-    
-    # Check if the passed in category is in the list of checkin categories.
-    categories.each do |cat|
-      if cat.downcase.include? category.downcase
-        result = true
-      end
-    end
-
-    # If an existing streak is broken, stop here.
-    # TODO: Try to continue and gather up historical streaks.
-    if streak_ended and streak > 0
-      break
-    end
-    
-    # If this week doesn't have a result, contine to next week.
-    if not result
-      streak_ended = true
-      next
-    end
-    
-    # Increment the streak.
-    streak_ended = false
-    streak = streak + 1
-  end
-  
-  return streak
 end
