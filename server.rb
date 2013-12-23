@@ -50,9 +50,10 @@ get '/checkins' do
   resp = JSON.parse resp.body
   
   checkins = group_checkins_by_week resp['response']['checkins']['items']
-  streak = get_streak_for checkins, 'coffee shop'
-  
-  pp '-------- streak for bar: ' + streak.inspect
+  category = params['category']
+    
+  resp = {}
+  resp[category] = get_streak_for checkins, category
   
   content_type :json
   resp.to_json
@@ -115,24 +116,26 @@ def get_streak_for(list, category)
   list.each_pair do |week, categories|
     result = false
     
+    # Check if the passed in category is in the list of checkin categories.
     categories.each do |cat|
       if cat.downcase.include? category.downcase
         result = true
       end
     end
 
+    # If an existing streak is broken, stop here.
+    # TODO: Try to continue and gather up historical streaks.
     if streak_ended and streak > 0
-      puts '----- broke'
       break
     end
     
+    # If this week doesn't have a result, contine to next week.
     if not result
-      puts "----- no result for week #{week}"
       streak_ended = true
       next
     end
     
-    puts '----- add to streak'
+    # Increment the streak.
     streak_ended = false
     streak = streak + 1
   end
