@@ -1,23 +1,17 @@
 GEM
   remote: https://rubygems.org/
   specs:
-    ffi (1.9.3)
+    httparty (0.12.0)
+      json (~> 1.8)
+      multi_xml (>= 0.5.2)
+    json (1.8.1)
     json_pure (1.8.1)
-    listen (1.0.3)
-      rb-fsevent (>= 0.9.3)
-      rb-inotify (>= 0.9)
-      rb-kqueue (>= 0.2)
-    patron (0.4.18)
+    multi_xml (0.5.5)
     rack (1.5.2)
     rack-protection (1.5.1)
       rack
-    rb-fsevent (0.9.3)
-    rb-inotify (0.9.3)
-      ffi (>= 0.5.0)
-    rb-kqueue (0.2.0)
-      ffi (>= 0.5.0)
-    rerun (0.8.2)
-      listen (~> 1.0.3)
+    shotgun (0.9)
+      rack (>= 1.0)
     sinatra (1.4.4)
       rack (~> 1.4)
       rack-protection (~> 1.4)
@@ -28,7 +22,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  httparty (~> 0.12.0)
   json_pure (~> 1.8.1)
-  patron (~> 0.4.18)
-  rerun (~> 0.8.2)
+  shotgun (~> 0.9)
   sinatra (~> 1.4.4)
