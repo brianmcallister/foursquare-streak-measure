@@ -1,6 +1,6 @@
 require 'sinatra'
 require 'json'
-require 'patron'
+require 'httparty'
 require 'pp'
 require_relative 'streak'
 require_relative 'user'
@@ -24,17 +24,13 @@ end
 
 user = User.new
 
-http = Patron::Session.new
-http.timeout = 10
-http.base_url = "http://api.foursquare.com/v2"
-http.enable_debug 'patron.debug'
-
 get '/' do
   'session: ' + session.inspect
 end
 
 get '/checkins' do
   return 'not authenticated' unless session[:token]
+  
   resp = http.get "/#{settings.fsq_endpoint_checkins}" +
     "?oauth_token=#{session[:token]}&limit=250"
   resp = JSON.parse resp.body
