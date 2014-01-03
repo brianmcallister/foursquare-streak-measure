@@ -3,6 +3,7 @@ require 'json'
 require 'patron'
 require 'pp'
 require_relative 'streak'
+require_relative 'user'
 
 enable :sessions
 
@@ -12,7 +13,7 @@ configure do
   set :port, '3000'
   set :domain, "http://localhost:#{settings.port}"
   
-  set :redirect, settings.domain
+  set :redirect, "#{settings.domain}/auth"
   set :id, 'RNUOV5S2LW13D22K4WBXXVNXDF3TQ4NQZA5IOODCFI4XWYYZ'
   set :secret, 'SJTC0H15ZYCSDZU2HSWB1F3PBTEGC0YTGSK5ABBKITYXRY1B'
   
@@ -21,33 +22,21 @@ configure do
   set :fsq_endpoint_checkins, 'users/self/checkins'
 end
 
+user = User.new
+
 http = Patron::Session.new
-http.timeout = 20
+http.timeout = 10
 http.base_url = "http://api.foursquare.com/v2"
 http.enable_debug 'patron.debug'
 
-token = ''
-
 get '/' do
-  token ||= session['token']
-  
-  if not token.empty?
-    return 'authed'
-  end
-  
-  if params.has_key? 'code'
-    session['token'] = get_access_token params['code']
-  end
-  
-  return 'session: ' + session.inspect
-  
-  erb :index
+  'session: ' + session.inspect
 end
 
 get '/checkins' do
-  return 'not authenticated' unless session['token']
+  return 'not authenticated' unless session[:token]
   resp = http.get "/#{settings.fsq_endpoint_checkins}" +
-    "?oauth_token=#{session['token']}&limit=250"
+    "?oauth_token=#{session[:token]}&limit=250"
   resp = JSON.parse resp.body
   
   checkins = resp['response']['checkins']['items']
@@ -60,20 +49,30 @@ get '/checkins' do
 end
 
 get '/auth' do
-  redirect to "#{settings.fsq_base_url}/oauth2/authenticate" +
-    "?client_id=#{settings.id}&response_type=code" +
-    "&redirect_uri=#{settings.redirect}"
-end
-
-def get_access_token(code)
-  session = Patron::Session.new
-  session.base_url = "#{settings.fsq_base_url}/oauth2/access_token"
+  code = params['code']
   
+  if code.nil?
+    redirect to "#{settings.fsq_base_url}/oauth2/authenticate" +
+      "?client_id=#{settings.id}&response_type=code" +
+      "&redirect_uri=#{settings.redirect}"
+  end
+  
+  # Get the access token.
+  session = Patron::Session.new
+  session.timeout = 10
+  
+  url = "#{settings.fsq_base_url}/oauth2/access_token"
   query_params = "client_id=#{settings.id}&client_secret=#{settings.secret}" +
     "&grant_type=authorization_code&redirect_uri=#{settings.redirect}" +
-    "&code=#{code}"
-    
-  resp = session.get "?#{query_params}"
+    "&code=#{@code}"
+  
+  resp = session.get "#{url}?#{query_params}"
   resp = JSON.parse resp.body
-  return resp['access_token']
+  session[:token] = resp['access_token']
+  redirect to '/'
+end
+
+get '/logout' do
+  session[:token] = nil
+  redirect to '/'
 end
